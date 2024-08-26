@@ -4679,7 +4679,7 @@ private:
 
                 constexpr auto maskToCheck = SWP_NOMOVE | SWP_NOSIZE;
 
-                if ((windowPosFlags & maskToCheck) == maskToCheck)
+                if ((windowPosFlags & maskToCheck) == maskToCheck || (windowPosFlags & 0x8000) != 0)
                     return;
             }
 
