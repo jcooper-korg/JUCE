@@ -1862,7 +1862,7 @@ void TextEditor::mouseDown (const MouseEvent& e)
 
             menuActive = true;
 
-            m.showMenuAsync (PopupMenu::Options().withTargetComponent(this).withTargetScreenArea(Rectangle<int>{}.withPosition(Desktop::getMousePosition())),
+            m.showMenuAsync (PopupMenu::Options().withTargetComponent (this).withMousePosition(),
                              [safeThis = SafePointer<TextEditor> { this }] (int menuResult)
                              {
                                  if (auto* editor = safeThis.getComponent())
