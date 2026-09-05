@@ -1328,6 +1328,9 @@ public:
                         flags |= Vst::kParamTitlesChanged;
         }
 
+        if (details.parameterValuesChanged)
+            flags |= Vst::kParamValuesChanged;
+
         if (auto* pluginInstance = getPluginInstance())
         {
             if (details.programChanged)
@@ -1426,12 +1429,40 @@ private:
     MidiController parameterToMidiController[(int) numMIDIChannels * (int) Vst::kCountCtrlNumber];
     Vst::ParamID midiControllerToParameter[numMIDIChannels][Vst::kCountCtrlNumber];
 
+    // a host answers kParamValuesChanged by re-reading getParamNormalized, which returns the
+    // controller-side cache. a plugin that changed its values quietly - without a per-parameter
+    // edit - has not updated that cache, so refresh it before asking for the re-read, otherwise
+    // the host reads back stale values. this is the same loop that setComponentState runs
+    // before its own restartComponent call.
+    //
+    // the program parameter is skipped: it is maintained by the programChanged path, which
+    // sends it as a normal edit
+    void refreshParameterCacheFromProcessor()
+    {
+        if (audioProcessor == nullptr)
+            return;
+
+        const auto programParamID = audioProcessor->getProgramParamID();
+
+        for (auto vstParamId : audioProcessor->getParamIDs())
+        {
+            if (vstParamId == programParamID)
+                continue;
+
+            if (auto* param = audioProcessor->getParamForVSTParamID (vstParamId))
+                EditController::setParamNormalized (vstParamId, (double) param->getValue());
+        }
+    }
+
     void restartComponentOnMessageThread (int32 flags) override
     {
         if ((flags & pluginShouldBeMarkedDirtyFlag) != 0)
             setDirty (true);
 
         flags &= ~pluginShouldBeMarkedDirtyFlag;
+
+        if ((flags & Vst::kParamValuesChanged) != 0)
+            refreshParameterCacheFromProcessor();
 
         if (auto* handler = componentHandler.get())
             handler->restartComponent (flags);

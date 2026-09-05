@@ -65,6 +65,8 @@ public:
         bool latencyChanged           = false;
         /** @see withParameterInfoChanged */
         bool parameterInfoChanged     = false;
+        /** @see withParameterValuesChanged */
+        bool parameterValuesChanged   = false;
         /** @see withProgramChanged */
         bool programChanged           = false;
         /** @see withNonParameterStateChanged */
@@ -89,6 +91,23 @@ public:
             @see parameterInfoChanged
         */
         [[nodiscard]] ChangeDetails withParameterInfoChanged     (bool b) const noexcept { return with (&ChangeDetails::parameterInfoChanged,     b); }
+
+        /** Indicates that the values of many or all of the AudioProcessor's parameters have 
+            changed, as the result of an action inside the plugin such as loading a preset.
+
+            This is distinct from parameterInfoChanged, which is about parameter attributes
+            rather than their values, and from the individual parameter change notifications,
+            which a host is entitled to treat as user edits and record as automation.
+
+            When this flag is set, the host should re-read every parameter value. Wrappers map
+            it to the format's bulk mechanism where one exists - kParamValuesChanged for VST3,
+            an any-parameter listener notification for AudioUnit. Formats with no equivalent,
+            notably AAX, ignore it, so a plugin that suppresses its own per-parameter
+            notifications in favour of this flag must only do so where it is honoured.
+
+            @see parameterValuesChanged
+        */
+        [[nodiscard]] ChangeDetails withParameterValuesChanged   (bool b) const noexcept { return with (&ChangeDetails::parameterValuesChanged,   b); }
 
         /** Indicates that the loaded program has changed.
 

@@ -1256,6 +1256,16 @@ public:
         AUEventListenerNotify (nullptr, nullptr, &auEvent);
     }
 
+    // tells every listener that any parameter may have changed. this is how AU expresses an
+    // en-masse value change such as a preset load
+    void sendAllParametersChangedEvent()
+    {
+        AudioUnitParameter parameter = auEvent.mArgument.mParameter;
+        parameter.mParameterID = kAUParameterListener_AnyParameter;
+
+        AUParameterListenerNotify (nullptr, nullptr, &parameter);
+    }
+
     void audioProcessorParameterChanged (AudioProcessor*, int index, float /*newValue*/) override
     {
         if (inParameterChangedCallback.get())
@@ -1881,6 +1891,9 @@ private:
             if (details.parameterInfoChanged)
                 flags |= parameterInfoChangedFlag;
 
+            if (details.parameterValuesChanged)
+                flags |= parameterValuesChangedFlag;
+
             if (details.programChanged)
                 flags |= programChangedFlag;
 
@@ -1909,6 +1922,9 @@ private:
                 owner.PropertyChanged (kAudioUnitProperty_ParameterInfo, kAudioUnitScope_Global, 0);
             }
 
+            if ((flags & parameterValuesChangedFlag) != 0)
+                owner.sendAllParametersChangedEvent();
+
             owner.PropertyChanged (kAudioUnitProperty_ClassInfo, kAudioUnitScope_Global, 0);
 
             if ((flags & programChangedFlag) != 0)
@@ -1920,9 +1936,10 @@ private:
 
         JuceAU& owner;
 
-        static constexpr int latencyChangedFlag       = 1 << 0,
-                             parameterInfoChangedFlag = 1 << 1,
-                             programChangedFlag       = 1 << 2;
+        static constexpr int latencyChangedFlag         = 1 << 0,
+                             parameterInfoChangedFlag   = 1 << 1,
+                             programChangedFlag         = 1 << 2,
+                             parameterValuesChangedFlag = 1 << 3;
 
         std::atomic<int> callbackFlags { 0 };
     };
